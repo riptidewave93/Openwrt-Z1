@@ -28,6 +28,7 @@
 #include "dev-usb.h"
 #include "dev-wmac.h"
 #include "machtypes.h"
+#include "caldata.h"
 
 #define Z1_GPIO_LED_POWER_ORANGE    17
 
@@ -88,6 +89,42 @@ static struct platform_device tricolor_leds = {
 	.dev.platform_data = &tricolor_led_data,
 };
 
+static struct ar8327_pad_cfg z1_ar8327_pad0_cfg = {
+	.mode = AR8327_PAD_MAC_RGMII,
+	.txclk_delay_en = true,
+	.rxclk_delay_en = true,
+	.txclk_delay_sel = AR8327_CLK_DELAY_SEL1,
+	.rxclk_delay_sel = AR8327_CLK_DELAY_SEL2,
+};
+
+static struct ar8327_led_cfg z1_ar8327_led_cfg = {
+	.led_ctrl0 = 0xc737c737,
+	.led_ctrl1 = 0x00000000,
+	.led_ctrl2 = 0x00000000,
+	.led_ctrl3 = 0x0030c300,
+	.open_drain = false,
+};
+
+static struct ar8327_platform_data z1_ar8327_data = {
+	.pad0_cfg = &z1_ar8327_pad0_cfg,
+	.port0_cfg = {
+		.force_link = 1,
+		.speed = AR8327_PORT_SPEED_1000,
+		.duplex = 1,
+		.txpause = 1,
+		.rxpause = 1,
+	},
+	.led_cfg = &z1_ar8327_led_cfg,
+};
+
+static struct mdio_board_info z1_mdio0_info[] = {
+	{
+		.bus_id = "ag71xx-mdio.0",
+		.phy_addr = 0 /* 4 */ ,
+		.platform_data = &z1_ar8327_data,
+	},
+};
+
 static void __init z1_setup(void)
 {
 	/* NAND */
@@ -95,7 +132,17 @@ static void __init z1_setup(void)
 	ath79_register_nfc();
 
 	/* MDIO Interface */
+	mdiobus_register_board_info(wndr4300_mdio0_info,
+				    ARRAY_SIZE(wndr4300_mdio0_info));
+
 	ath79_register_mdio(0, 0x0);
+
+	/* GMAC0 is connected to an AR8327 switch */
+	ath79_eth0_data.phy_if_mode = PHY_INTERFACE_MODE_RGMII;
+	ath79_eth0_data.phy_mask = BIT(0) /* BIT(4) */;
+	ath79_eth0_data.mii_bus_dev = &ath79_mdio0_device.dev;
+	ath79_eth0_pll_data.pll_1000 = 0x06000000;
+	ath79_register_eth(0);
 
 	/* XLNA */
 	ath79_wmac_set_ext_lna_gpio(0,Z1_GPIO_XLNA0);
@@ -114,7 +161,6 @@ static void __init z1_setup(void)
 
 	/* Wireless */
 	ath79_register_wmac_simple();
-	ap91_pci_init_simple();
-
+	ap91_pci_init(z1_caldata, NULL);
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
