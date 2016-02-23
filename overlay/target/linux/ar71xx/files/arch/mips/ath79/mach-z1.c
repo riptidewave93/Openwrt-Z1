@@ -20,15 +20,15 @@
 #include <linux/pci.h>
 
 #include "common.h"
+#include "dev-ap9x-pci.h"
 #include "dev-eth.h"
-#include "pci.h"
 #include "dev-gpio-buttons.h"
 #include "dev-leds-gpio.h"
 #include "dev-nfc.h"
+#include "dev-usb.h"
 #include "dev-wmac.h"
 #include "machtypes.h"
 
-/* #define Z1_GPIO_LED_POWER_WHITE	18  Still need to confirm this*/
 #define Z1_GPIO_LED_POWER_ORANGE    17
 
 #define Z1_GPIO_NU801_CKI        14
@@ -98,8 +98,8 @@ static void __init z1_setup(void)
 	ath79_register_mdio(0, 0x0);
 
 	/* XLNA */
-	ar934x_set_ext_lna_gpio(0,Z1_GPIO_XLNA0);
-	ar934x_set_ext_lna_gpio(1,Z1_GPIO_XLNA1);
+	ath79_wmac_set_ext_lna_gpio(0,Z1_GPIO_XLNA0);
+	ath79_wmac_set_ext_lna_gpio(1,Z1_GPIO_XLNA1);
 
 	/* LEDs and Buttons */
 	platform_device_register(&tricolor_leds);
@@ -108,6 +108,13 @@ static void __init z1_setup(void)
 	ath79_register_gpio_keys_polled(-1, Z1_KEYS_POLL_INTERVAL,
 					ARRAY_SIZE(Z1_gpio_keys),
 					Z1_gpio_keys);
+
+	/* USB */
+	ath79_register_usb();
+
+	/* Wireless */
+	ath79_register_wmac_simple();
+	ap91_pci_init_simple();
 
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
