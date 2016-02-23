@@ -74,7 +74,7 @@ static struct led_nu801_template tricolor_led_template = {
 		LED_OFF,
 	},
 	.default_trigger = "none",
-	.led_colors = { "red", "green", "blue" },
+	.led_colors = { "blue", "green", "red" },
 };
 
 static struct led_nu801_platform_data tricolor_led_data = {
