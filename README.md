@@ -15,18 +15,20 @@ Note that you will need to run a modify on the first compile to select the NAND 
 To Do
 -----
 ##### Z1
-  * Sys Integration
-  * Kernel Device Profile
-  * Sysupgrade
-  * WiFi
-  * Ethernet
-  * LED's/GPIOs
+  * Fixup WiFi on PCIe
+  * Cleanup Eth config? (maybe)
   * Merge upstream!
 
 Working
 -----
 ##### Z1
-  * Nothing yet...
+  * Sysupgrade & Caldata generation
+  * WiFi (mostly)
+  * Ethernet
+  * LED's/GPIOs
+  * System Integration
+  * Kernel Device Profile
+  * USB
 
 Notice
 ------
