@@ -1,4 +1,4 @@
-# Openwrt-MR18
+# Openwrt-Z1
 
 Bringup repo for the Cisco Meraki Z1 on OpenWRT!
 
