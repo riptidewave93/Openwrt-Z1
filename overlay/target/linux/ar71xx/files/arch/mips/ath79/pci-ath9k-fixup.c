@@ -10,6 +10,7 @@
 
 #include <linux/pci.h>
 #include <linux/delay.h>
+#include <linux/device.h>
 #include <linux/firmware.h>
 
 #include <asm/mach-ath79/ar71xx_regs.h>
@@ -120,11 +121,20 @@ static void ath9k_pci_fixup(struct pci_dev *dev)
 			continue;
 
 		if (ath9k_fixups[i].cal_file != NULL) {
+#ifndef OPTION2
+			device_initialize(&dev->dev);
 			err = request_firmware_nowait(THIS_MODULE, true,
 						      ath9k_fixups[i].cal_file,
 						      &dev->dev, GFP_KERNEL,
 						      dev,
 						      ath9k_pci_fixup_fw_cb);
+#else
+			err = request_firmware_nowait(THIS_MODULE, true,
+						      ath9k_fixups[i].cal_file,
+						      NULL, GFP_KERNEL,
+						      dev,
+						      ath9k_pci_fixup_fw_cb);
+#endif
 			if (err) {
 				printk(KERN_ERR "failed to request '%s' caldata (%d).\n",
 				       ath9k_fixups[i].cal_file, err);
