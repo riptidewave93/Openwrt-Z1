@@ -18,18 +18,19 @@
 #include <asm/mach-ath79/ar71xx_regs.h>
 
 #include <linux/leds-nu801.h>
+#include <linux/firmware.h>
 #include <linux/pci.h>
 
 #include "common.h"
-#include "dev-ap9x-pci.h"
 #include "dev-eth.h"
 #include "dev-gpio-buttons.h"
 #include "dev-leds-gpio.h"
 #include "dev-nfc.h"
 #include "dev-usb.h"
 #include "dev-wmac.h"
+#include "pci.h"
+#include "pci-ath9k-fixup.h"
 #include "machtypes.h"
-#include "caldata.h"
 
 #define Z1_GPIO_LED_POWER_ORANGE    17
 
@@ -119,6 +120,30 @@ static struct mdio_board_info z1_mdio0_info[] = {
 	},
 };
 
+static struct ath9k_platform_data pci_wifi_data = {
+        .led_pin = -1,
+	.eeprom_name = "pci_wmac0.eeprom",
+};
+
+static int z1_pci_plat_dev_init(struct pci_dev *dev)
+{
+	switch (PCI_SLOT(dev->devfn)) {
+	case 0:
+		dev->dev.platform_data = &pci_wifi_data;
+		break;
+	}
+
+	return 0;
+}
+
+static void __init z1_pci_init(void)
+{
+	ath79_pci_set_plat_dev_init(z1_pci_plat_dev_init);
+	ath79_register_pci();
+
+	pci_enable_ath9k_fixup_file(0, pci_wifi_data.eeprom_name);
+}
+
 static void __init z1_setup(void)
 {
 	/* NAND */
@@ -159,6 +184,6 @@ static void __init z1_setup(void)
 
 	/* Wireless */
 	ath79_register_wmac_simple();
-	ap91_pci_init(z1_caldata, NULL);
+	z1_pci_init();
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
