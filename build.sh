@@ -48,12 +48,6 @@ if [ $firstbuild = "1" ]; then
   cd - > /dev/null
 fi
 
-Msg "Applying configurations..."
-cp ./configs/openwrt-config $clonedir/.config
-cp ./configs/kernel-4.1-config $clonedir/target/linux/ar71xx/config-4.1
-cp ./configs/kernel-4.1-config $clonedir/target/linux/ar71xx/nand/config-default
-
-
 if [ $modify -eq 1 ]; then
   cd $clonedir
   Msg "Loading OpenWRT Menuconfig"
@@ -61,14 +55,6 @@ if [ $modify -eq 1 ]; then
   Msg "Loading Kernel Menuconfig"
   make kernel_menuconfig -j$cpu_num V=s
   cd - > /dev/null
-  Msg "Copy kernel config to nand-default? (You normally want this....)"
-  Msg "Y/n?"
-  read input
-  if [[ $input !=  *"n"* ]]; then
-    Msg "Copying Config..."
-    cp $clonedir/build_dir/target-mips_34kc_musl-1.1.12/linux-ar71xx_nand/linux-4.1.16/.config $clonedir/target/linux/ar71xx/config-4.1
-    cp $clonedir/target/linux/ar71xx/config-4.1 $clonedir/target/linux/ar71xx/nand/config-default
-  fi
 fi
 
 Msg "Building Time!!!"
@@ -78,20 +64,10 @@ make -j$cpu_num V=s
 if [ $? -ne 0 ]; then
   cd - > /dev/null
   Msg "Build Failed!"
+  exit 1
 else
   cd - > /dev/null
   Msg "Compile Complete!"
-fi
-
-if [ $modify -eq 1 ]; then
-  Msg "Would you like to save your new configurations to the configs folder?"
-  Msg "Y/n?"
-  read input
-  if [[ $input !=  *"n"* ]]; then
-    Msg "Saving configs..."
-    cp $clonedir/.config ./configs/openwrt-config
-    cp $clonedir/target/linux/ar71xx/config-4.1 ./configs/kernel-4.1-config
-  fi
 fi
 
 Msg "Build.sh Finished!"

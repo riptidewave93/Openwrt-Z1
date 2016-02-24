@@ -81,7 +81,7 @@ case "$FIRMWARE" in
 		else
 			ath9k_eeprom_extract "origcaldata" 4096 2048
 		fi
-		ath9k_patch_firmware_mac $(macaddr_add $(mtd_get_mac_binary_ubi board-config 102) +1)
+		ath9k_patch_firmware_mac $(macaddr_add $(mtd_get_mac_binary_ubi board-config 102) +2)
 		;;
 	*)
 		ath9k_eeprom_die "board $board is not supported yet"
@@ -118,7 +118,7 @@ case "$FIRMWARE" in
 		else
 			ath9k_eeprom_extract "origcaldata" 86016 2048
 		fi
-		ath9k_patch_firmware_mac $(macaddr_add $(mtd_get_mac_binary_ubi board-config 102) +2)
+		ath9k_patch_firmware_mac $(macaddr_add $(mtd_get_mac_binary_ubi board-config 102) +3)
 		;;
 	*)
 		ath9k_eeprom_die "board $board is not supported yet"

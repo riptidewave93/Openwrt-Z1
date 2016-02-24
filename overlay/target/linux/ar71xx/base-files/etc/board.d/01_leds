@@ -717,7 +717,7 @@ wzr-hp-g300nh)
 	;;
 
 z1)
-	ucidef_set_led_netdev "wlan0" "WLAN0" "z1:blue:tricolor0" "wlan0"
+	ucidef_set_led_netdev "wlan1" "WLAN1" "z1:blue:tricolor0" "wlan1"
 	;;
 
 zcn-1523h-2)

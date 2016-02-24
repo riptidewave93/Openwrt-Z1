@@ -43,7 +43,7 @@
 #define Z1_KEYS_POLL_INTERVAL    20  /* msecs */
 #define Z1_KEYS_DEBOUNCE_INTERVAL  (3 * Z1_KEYS_POLL_INTERVAL)
 
-#define Z1_ETH_SWITCH_PHY 4
+#define Z1_ETH_SWITCH_PHY 0
 
 static struct gpio_led Z1_leds_gpio[] __initdata = {
 	{
@@ -100,14 +100,6 @@ static struct ar8327_pad_cfg z1_ar8327_pad0_cfg = {
 	.rxclk_delay_sel = AR8327_CLK_DELAY_SEL2,
 };
 
-static struct ar8327_led_cfg z1_ar8327_led_cfg = {
-	.led_ctrl0 = 0xc737c737,
-	.led_ctrl1 = 0x00000000,
-	.led_ctrl2 = 0x00000000,
-	.led_ctrl3 = 0x0030c300,
-	.open_drain = false,
-};
-
 static struct ar8327_platform_data z1_ar8327_data = {
 	.pad0_cfg = &z1_ar8327_pad0_cfg,
 	.port0_cfg = {
@@ -117,7 +109,6 @@ static struct ar8327_platform_data z1_ar8327_data = {
 		.txpause = 1,
 		.rxpause = 1,
 	},
-	.led_cfg = &z1_ar8327_led_cfg,
 };
 
 static struct mdio_board_info z1_mdio0_info[] = {
@@ -134,11 +125,15 @@ static void __init z1_setup(void)
 	ath79_nfc_set_ecc_mode(AR934X_NFC_ECC_SOFT_BCH);
 	ath79_register_nfc();
 
+	/* Eth Config */
+	ath79_setup_ar934x_eth_cfg(AR934X_ETH_CFG_RGMII_GMAC0 |
+				   AR934X_ETH_CFG_SW_ONLY_MODE);
+
 	/* MDIO Interface */
+	ath79_register_mdio(1, 0x0);
+	ath79_register_mdio(0, 0x0);
 	mdiobus_register_board_info(z1_mdio0_info,
 				    ARRAY_SIZE(z1_mdio0_info));
-
-	ath79_register_mdio(0, 0x0);
 
 	/* GMAC0 is connected to an AR8327 switch */
 	ath79_eth0_data.phy_if_mode = PHY_INTERFACE_MODE_RGMII;
