@@ -121,7 +121,7 @@ static struct mdio_board_info z1_mdio0_info[] = {
 };
 
 static struct ath9k_platform_data pci_wifi_data = {
-        .led_pin = -1,
+	.led_pin = -1,
 	.eeprom_name = "pci_wmac0.eeprom",
 };
 
