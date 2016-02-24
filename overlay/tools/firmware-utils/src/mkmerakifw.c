@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Thomas Hebb <tommyhebb@gmail.com>
+ * Copyright (C) 2016 Christian Lamparter <chunkeey@googlemail.com>
  *
  * The format of the header this tool generates was first documented by
  * Chris Blake <chrisrblake93 (at) gmail.com> in a shell script of the
@@ -7,10 +8,14 @@
  * original script can be found at:
  * <https://github.com/riptidewave93/meraki-partbuilder>
  *
+ * Support for the old header format, which is used by the Cisco Z1 AP
+ * has been reverse engineered from the nandloader's nand_load_bk function.
+ * The original code is part of Cisco's GPL code and can be found at:
+ * <https://github.com/riptidewave93/meraki-linux>
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published
  * by the Free Software Foundation.
- *
  */
 
 #include <stdio.h>
@@ -164,7 +169,7 @@ static void writel(unsigned char *buf, size_t offset, uint32_t value)
 	memcpy(buf + offset, &value, sizeof(uint32_t));
 }
 
-static int meraki_new(const struct board_info *board, size_t klen,
+static int meraki_new(const struct board_info *board, const size_t klen,
 		      FILE *out, FILE *in)
 {
 	unsigned char *kernel;
@@ -217,7 +222,7 @@ static int meraki_new(const struct board_info *board, size_t klen,
 	return rc == 1 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
-static uint32_t crc32_table[256] = {
+static const uint32_t crc32_table[256] = {
 	0x00000000, 0x77073096, 0xEE0E612C, 0x990951BA, 0x076DC419, 0x706AF48F, 0xE963A535, 0x9E6495A3,
 	0x0EDB8832, 0x79DCB8A4, 0xE0D5E91E, 0x97D2D988, 0x09B64C2B, 0x7EB17CBD, 0xE7B82D07, 0x90BF1D91,
 	0x1DB71064, 0x6AB020F2, 0xF3B97148, 0x84BE41DE, 0x1ADAD47D, 0x6DDDE4EB, 0xF4D4B551, 0x83D385C7,
@@ -252,12 +257,12 @@ static uint32_t crc32_table[256] = {
 	0xB3667A2E, 0xC4614AB8, 0x5D681B02, 0x2A6F2B94, 0xB40BBE37, 0xC30C8EA1, 0x5A05DF1B, 0x2D02EF8D
 };
 
-static inline uint32_t crc32_accumulate_8(uint32_t crc, uint8_t ch)
+static inline uint32_t crc32_accumulate_8(const uint32_t crc, const uint8_t ch)
 {
         return crc32_table[(crc ^ ch) & 0xff] ^ (crc >> 8);
 }
 
-static void crc32_csum(uint8_t *buf, size_t len)
+static void crc32_csum(uint8_t *buf, const size_t len)
 {
 	uint32_t crc;
 	size_t i;
@@ -275,7 +280,7 @@ static void crc32_csum(uint8_t *buf, size_t len)
 }
 
 
-static int meraki_old(struct board_info *board, size_t klen,
+static int meraki_old(const struct board_info *board, const size_t klen,
 		      FILE *out, FILE *in)
 {
 	unsigned char *kernel;
