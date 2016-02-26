@@ -259,4 +259,4 @@ static void __init z1_setup(void)
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
 
-late_initcall(z1_wmac0_init);
+device_initcall(z1_wmac0_init);
