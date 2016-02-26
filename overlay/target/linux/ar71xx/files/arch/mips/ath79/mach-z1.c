@@ -29,6 +29,7 @@
 #include "dev-usb.h"
 #include "dev-wmac.h"
 #include "dev-ap9x-pci.h"
+#include "pci-ath9k-fixup.h"
 #include "machtypes.h"
 
 #define Z1_GPIO_LED_POWER_ORANGE    17
@@ -126,7 +127,27 @@ static void z1_fw_cb(const struct firmware *fw, void *ctx)
 	struct platform_device *vdev = (struct platform_device *) ctx;
 
 	if (fw) {
-		ap91_pci_init(kmemdup(fw->data, fw->size, GFP_KERNEL), NULL);
+		struct pci_dev *pdev;
+
+		pci_lock_rescan_remove();
+		pdev = pci_get_device(0x168c, 0xff1c, NULL);
+		if (pdev) {
+			struct pci_bus *bus = pdev->bus;
+			u16 *cal_data = kmemdup(fw->data, fw->size,
+						GFP_KERNEL);
+
+			pci_enable_ath9k_fixup(0, cal_data);
+			pci_stop_and_remove_bus_device(pdev);
+
+			/* the device should come back with the proper
+			 * ProductId. But we have to initiate a rescan.
+			 */
+			pci_rescan_bus(bus);
+		} else {
+			printk(KERN_ERR "Failed to find uninitialized pci wmac0\n");
+		}
+		pci_unlock_rescan_remove();
+
 		release_firmware(fw);
 	} else {
 		printk(KERN_ERR "caldata request for '" EEPROM_CALDATA "' timed out");
@@ -134,7 +155,7 @@ static void z1_fw_cb(const struct firmware *fw, void *ctx)
 	platform_device_unregister(vdev);
 }
 
-static void __init z1_pci_init(void)
+static int z1_wmac0_init(void)
 {
 	struct platform_device *vdev;
 	int err = 0;
@@ -147,19 +168,21 @@ static void __init z1_pci_init(void)
 	 *     request_firmware_nowait
 	 *  --- wait for the system to be ready to handle the request ---
 	 *  1. reentry into z1_fw_cb,with the loaded caldata
-	 *  2. initialize AR934x PCI subsystem and provide caldata to
-	 *     fixup the card.
+	 *  2. perform the PCI fixup.
+	 *  3. remove old pci device and rescan the pci bus to find the
+	 *     initialized device (productid will update)
 	 */
 
 	/* create a virtual device for the eeprom loader. This is necessary
 	 * because request_firmware_nowait needs a proper device for
-	 * accounting.
+	 * accounting. In theory, the pci device could be used as well.
+	 * However we don't know the state of the device at this point.
 	 */
 	vdev = platform_device_register_simple("z1_caldata", -1, NULL, 0);
 	if (IS_ERR(vdev)) {
 		err = PTR_ERR(vdev);
 		printk(KERN_ERR "failed to register vdev. (%d).\n", err);
-		return;
+		return err;
 	}
 
 	err = request_firmware_nowait(THIS_MODULE, true, EEPROM_CALDATA,
@@ -168,6 +191,7 @@ static void __init z1_pci_init(void)
 		printk(KERN_ERR "failed to request caldata (%d).\n", err);
 		platform_device_unregister(vdev);
 	}
+	return err;
 }
 
 static void __init z1_setup(void)
@@ -194,8 +218,8 @@ static void __init z1_setup(void)
 	ath79_register_eth(0);
 
 	/* XLNA */
-	ath79_wmac_set_ext_lna_gpio(0,Z1_GPIO_XLNA0);
-	ath79_wmac_set_ext_lna_gpio(1,Z1_GPIO_XLNA1);
+	ath79_wmac_set_ext_lna_gpio(0, Z1_GPIO_XLNA0);
+	ath79_wmac_set_ext_lna_gpio(1, Z1_GPIO_XLNA1);
 
 	/* LEDs and Buttons */
 	platform_device_register(&tricolor_leds);
@@ -210,6 +234,8 @@ static void __init z1_setup(void)
 
 	/* Wireless */
 	ath79_register_wmac_simple();
-	z1_pci_init();
+	ap91_pci_init_simple();
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
+
+device_initcall(z1_wmac0_init);
