@@ -28,7 +28,7 @@
 #include "dev-nfc.h"
 #include "dev-usb.h"
 #include "dev-wmac.h"
-#include "dev-ap9x-pci.h"
+#include "pci.h"
 #include "pci-ath9k-fixup.h"
 #include "machtypes.h"
 
@@ -122,6 +122,40 @@ static struct mdio_board_info z1_mdio0_info[] = {
 
 #define EEPROM_CALDATA "pci_wmac0.eeprom"
 
+static struct ath9k_platform_data z1_wmac0_data = {
+	.led_pin = -1,
+	.eeprom_name = EEPROM_CALDATA,
+};
+
+static int z1_pci_plat_dev_init(struct pci_dev *dev)
+{
+	switch (PCI_SLOT(dev->devfn)) {
+	case 0:
+		dev->dev.platform_data = &z1_wmac0_data;
+		break;
+	}
+
+	return 0;
+}
+
+static void z1_pci_init(void)
+{
+	/* The internal PCIe card is very tricky to enable proberly.
+	 * We have to get the caldata from the NAND, which is only
+	 * accessible once the rootfs is available. That's why we
+	 *  0. request the caldata file 'pci_wmac0.eeprom' via
+	 *     request_firmware_nowait
+	 *  --- wait for the system to be ready to handle the request ---
+	 *  1. reentry into z1_fw_cb,with the loaded caldata
+	 *  2. perform the PCI fixup.
+	 *  3. remove old pci device and rescan the pci bus to find the
+	 *     initialized device (productid will update)
+	 */
+
+	ath79_pci_set_plat_dev_init(z1_pci_plat_dev_init);
+	ath79_register_pci();
+}
+
 static void z1_fw_cb(const struct firmware *fw, void *ctx)
 {
 	struct platform_device *vdev = (struct platform_device *) ctx;
@@ -159,19 +193,6 @@ static int z1_wmac0_init(void)
 {
 	struct platform_device *vdev;
 	int err = 0;
-
-
-	/* The internal PCIe card is very tricky to enable proberly.
-	 * We have to get the caldata from the NAND, which is only
-	 * accessible once the rootfs is available. That's why we
-	 *  0. request the caldata file 'pci_wmac0.eeprom' via
-	 *     request_firmware_nowait
-	 *  --- wait for the system to be ready to handle the request ---
-	 *  1. reentry into z1_fw_cb,with the loaded caldata
-	 *  2. perform the PCI fixup.
-	 *  3. remove old pci device and rescan the pci bus to find the
-	 *     initialized device (productid will update)
-	 */
 
 	/* create a virtual device for the eeprom loader. This is necessary
 	 * because request_firmware_nowait needs a proper device for
@@ -234,7 +255,7 @@ static void __init z1_setup(void)
 
 	/* Wireless */
 	ath79_register_wmac_simple();
-	ap91_pci_init_simple();
+	z1_pci_init();
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
 
