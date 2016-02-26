@@ -28,8 +28,7 @@
 #include "dev-nfc.h"
 #include "dev-usb.h"
 #include "dev-wmac.h"
-#include "pci.h"
-#include "pci-ath9k-fixup.h"
+#include "dev-ap9x-pci.h"
 #include "machtypes.h"
 
 #define Z1_GPIO_LED_POWER_ORANGE    17
@@ -120,65 +119,55 @@ static struct mdio_board_info z1_mdio0_info[] = {
 	},
 };
 
-static struct ath9k_platform_data pci_wifi_data = {
-	.led_pin = -1,
-	.eeprom_name = "pci_wmac0.eeprom",
-};
+#define EEPROM_CALDATA "pci_wmac0.eeprom"
 
-static int z1_pci_plat_dev_init(struct pci_dev *dev)
+static void z1_fw_cb(const struct firmware *fw, void *ctx)
 {
-	switch (PCI_SLOT(dev->devfn)) {
-	case 0:
-		dev->dev.platform_data = &pci_wifi_data;
-		break;
-	}
+	struct platform_device *vdev = (struct platform_device *) ctx;
 
-	return 0;
+	if (fw) {
+		ap91_pci_init(kmemdup(fw->data, fw->size, GFP_KERNEL), NULL);
+		release_firmware(fw);
+	} else {
+		printk(KERN_ERR "caldata request for '" EEPROM_CALDATA "' timed out");
+	}
+	platform_device_unregister(vdev);
 }
 
 static void __init z1_pci_init(void)
 {
-	struct pci_dev *pdev;
-
-	ath79_pci_set_plat_dev_init(z1_pci_plat_dev_init);
-	ath79_register_pci();
-
-	pdev = pci_get_device(0x168c, 0xff1c, NULL);
-	if (pdev)
-		pci_stop_and_remove_bus_device_locked(pdev);
-}
-
-static int z1_pci_fixup_ath9k(void)
-{
-	struct platform_device *pdev;
-	const struct firmware *fw;
-	struct pci_bus *b = NULL;
+	struct platform_device *vdev;
 	int err = 0;
 
-	pdev = platform_device_register_simple("z1_caldata", -1, NULL, 0);
-	if (IS_ERR(pdev)) {
-		err = PTR_ERR(pdev);
-		printk(KERN_ERR "failed to register pdev. (%d).\n", err);
-		return err;
+
+	/* The internal PCIe card is very tricky to enable proberly.
+	 * We have to get the caldata from the NAND, which is only
+	 * accessible once the rootfs is available. That's why we
+	 *  0. request the caldata file 'pci_wmac0.eeprom' via
+	 *     request_firmware_nowait
+	 *  --- wait for the system to be ready to handle the request ---
+	 *  1. reentry into z1_fw_cb,with the loaded caldata
+	 *  2. initialize AR934x PCI subsystem and provide caldata to
+	 *     fixup the card.
+	 */
+
+	/* create a virtual device for the eeprom loader. This is necessary
+	 * because request_firmware_nowait needs a proper device for
+	 * accounting.
+	 */
+	vdev = platform_device_register_simple("z1_caldata", -1, NULL, 0);
+	if (IS_ERR(vdev)) {
+		err = PTR_ERR(vdev);
+		printk(KERN_ERR "failed to register vdev. (%d).\n", err);
+		return;
 	}
 
-	err = request_firmware(&fw, "pci_wmac0.eeprom", &pdev->dev);
+	err = request_firmware_nowait(THIS_MODULE, true, EEPROM_CALDATA,
+				      &vdev->dev, GFP_KERNEL, vdev, z1_fw_cb);
 	if (err) {
 		printk(KERN_ERR "failed to request caldata (%d).\n", err);
-		goto unregister_dev;
+		platform_device_unregister(vdev);
 	}
-
-	pci_enable_ath9k_fixup(0, kmemdup(fw->data, fw->size, GFP_KERNEL));
-	release_firmware(fw);
-
-	pci_lock_rescan_remove();
-	while ((b = pci_find_next_bus(b)) != NULL)
-		pci_rescan_bus(b);
-	pci_unlock_rescan_remove();
-
-unregister_dev:
-	platform_device_unregister(pdev);
-	return err;
 }
 
 static void __init z1_setup(void)
@@ -221,20 +210,6 @@ static void __init z1_setup(void)
 
 	/* Wireless */
 	ath79_register_wmac_simple();
-
-	/* The internal PCIe card is very tricky to enable proberly.
-	 * We have to get the caldata from the NAND, which is only
-	 * accessible once the rootfs is available. That's why we
-	 *  1. soft-remove the uninitialized PCIe device from the bus,
-	 *     if it exists.
-	 *  --- wait for the rootfs to be available ---
-	 *  2. reentry via device_initcall into z1_fixup_ath9k
-	 *  3. request the eeprom data via request_firmware
-	 *  4. setup pci_enable_ath9k_fixup with eeprom's caldata
-	 *  5. issue a pci bus rescan.
-	 */
 	z1_pci_init();
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
-
-device_initcall(z1_pci_fixup_ath9k);
