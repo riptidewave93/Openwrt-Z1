@@ -2543,7 +2543,7 @@ define Device/z1
   BOARDNAME = Z1
   BLOCKSIZE := 64k
   CONSOLE = ttyS0,115200
-  MTDPARTS = ar934x-nfc:128K(loader1),8064K(kernel),128K(loader2),8064K(recovery),114560K(ubi),128K(origcaldata)ro
+  MTDPARTS = ar934x-nfc:128K(loader1)ro,8064K(kernel),128K(loader2)ro,8064K(recovery),114560K(ubi),128K(origcaldata)ro
   IMAGES := sysupgrade.tar
   KERNEL := kernel-bin | patch-cmdline | MerakiNAND
   KERNEL_INITRAMFS := kernel-bin | patch-cmdline | MerakiNAND
