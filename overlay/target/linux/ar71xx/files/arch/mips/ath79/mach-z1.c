@@ -2,6 +2,7 @@
  *  Cisco Meraki Z1 board support
  *
  *  Copyright (C) 2016 Chris Blake <chrisrblake93@gmail.com>
+ *  Copyright (C) 2016 Christian Lamparter <chunkeey@googlemail.com>
  *
  *  Based on Cisco Meraki GPL Release r23-20150601 Z1 Device Config
  *
@@ -79,7 +80,6 @@ static struct led_nu801_template tricolor_led_template = {
 		LED_OFF,
 	},
 	.default_trigger = "none",
-	.led_colors = { "blue", "green", "red" },
 };
 
 static struct led_nu801_platform_data tricolor_led_data = {
