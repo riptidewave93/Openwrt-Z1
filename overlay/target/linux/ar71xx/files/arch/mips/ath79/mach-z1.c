@@ -29,7 +29,7 @@
 #include "dev-nfc.h"
 #include "dev-usb.h"
 #include "dev-wmac.h"
-#include "pci.h"
+#include "dev-ap9x-pci.h"
 #include "pci-ath9k-fixup.h"
 #include "machtypes.h"
 
@@ -120,101 +120,15 @@ static struct mdio_board_info z1_mdio0_info[] = {
 	},
 };
 
-#define EEPROM_CALDATA "pci_wmac0.eeprom"
-
-static struct ath9k_platform_data z1_wmac0_data = {
-	.led_pin = -1,
+unsigned char z1_pcifix[] = {
+  0xa5, 0x5a, 0x00, 0x00, 0x00, 0x03, 0x60, 0x00, 0x16, 0x8c, 0x00, 0x29,
+  0x60, 0x08, 0x00, 0x01, 0x02, 0x80, 0x60, 0x2c, 0x16, 0x8c, 0xa0, 0x93,
+  0x50, 0x00, 0x16, 0x8c, 0x00, 0x2a, 0x50, 0x08, 0x00, 0x01, 0x02, 0x80,
+  0x50, 0x2c, 0x16, 0x8c, 0xa0, 0x93, 0x50, 0x64, 0x0c, 0xc0, 0x05, 0x04,
+  0x50, 0x6c, 0x38, 0x11, 0x00, 0x03, 0x40, 0x04, 0x07, 0x3b, 0x00, 0x40,
+  0x40, 0x74, 0x00, 0x03, 0x00, 0x00, 0x40, 0x00, 0x50, 0x01, 0x01, 0xc2,
+  0x60, 0x34, 0x00, 0x44, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, };
 };
-
-static int z1_pci_plat_dev_init(struct pci_dev *dev)
-{
-	switch (PCI_SLOT(dev->devfn)) {
-	case 0:
-		dev->dev.platform_data = &z1_wmac0_data;
-		break;
-	}
-
-	return 0;
-}
-
-static void z1_pci_init(void)
-{
-	/* The internal PCIe card is very tricky to enable proberly.
-	 * We have to get the caldata from the NAND, which is only
-	 * accessible once the rootfs is available. That's why we
-	 *  0. request the caldata file 'pci_wmac0.eeprom' via
-	 *     request_firmware_nowait
-	 *  --- wait for the system to be ready to handle the request ---
-	 *  1. reentry into z1_fw_cb,with the loaded caldata
-	 *  2. perform the PCI fixup.
-	 *  3. remove old pci device and rescan the pci bus to find the
-	 *     initialized device (productid will update)
-	 */
-
-	ath79_pci_set_plat_dev_init(z1_pci_plat_dev_init);
-	ath79_register_pci();
-}
-
-static void z1_fw_cb(const struct firmware *fw, void *ctx)
-{
-	struct platform_device *vdev = (struct platform_device *) ctx;
-
-	if (fw && sizeof(z1_wmac0_data.eeprom_data) >= fw->size) {
-		struct pci_dev *pdev;
-
-		pci_lock_rescan_remove();
-		pdev = pci_get_device(0x168c, 0xff1c, NULL);
-		if (pdev) {
-			struct pci_bus *bus = pdev->bus;
-			/* there could be a offset fw->data + 0x200 */
-	                memcpy(z1_wmac0_data.eeprom_data,
-			       fw->data + 0x200,
-			       sizeof(z1_wmac0_data.eeprom_data) - 0x200);
-
-			pci_enable_ath9k_fixup(0, kmemdup(fw->data, fw->size, GFP_KERNEL));
-			pci_stop_and_remove_bus_device(pdev);
-
-			/* the device should come back with the proper
-			 * ProductId. But we have to initiate a rescan.
-			 */
-			pci_rescan_bus(bus);
-		} else {
-			printk(KERN_ERR "Failed to find uninitialized pci wmac0\n");
-		}
-		pci_unlock_rescan_remove();
-
-		release_firmware(fw);
-	} else {
-		printk(KERN_ERR "invalid caldata received\n");
-	}
-	platform_device_unregister(vdev);
-}
-
-static int z1_wmac0_init(void)
-{
-	struct platform_device *vdev;
-	int err = 0;
-
-	/* create a virtual device for the eeprom loader. This is necessary
-	 * because request_firmware_nowait needs a proper device for
-	 * accounting. In theory, the pci device could be used as well.
-	 * However we don't know the state of the device at this point.
-	 */
-	vdev = platform_device_register_simple("z1_caldata", -1, NULL, 0);
-	if (IS_ERR(vdev)) {
-		err = PTR_ERR(vdev);
-		printk(KERN_ERR "failed to register vdev. (%d).\n", err);
-		return err;
-	}
-
-	err = request_firmware_nowait(THIS_MODULE, true, EEPROM_CALDATA,
-				      &vdev->dev, GFP_KERNEL, vdev, z1_fw_cb);
-	if (err) {
-		printk(KERN_ERR "failed to request caldata (%d).\n", err);
-		platform_device_unregister(vdev);
-	}
-	return err;
-}
 
 static void __init z1_setup(void)
 {
@@ -256,8 +170,7 @@ static void __init z1_setup(void)
 
 	/* Wireless */
 	ath79_register_wmac_simple();
-	z1_pci_init();
+	pci_enable_ath9k_fixup(0, (u16*) z1_pcifix);
+	ap91_pci_init_simple();
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
-
-device_initcall(z1_wmac0_init);
