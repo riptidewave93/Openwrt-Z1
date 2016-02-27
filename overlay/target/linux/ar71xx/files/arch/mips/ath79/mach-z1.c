@@ -168,10 +168,11 @@ static void z1_fw_cb(const struct firmware *fw, void *ctx)
 		if (pdev) {
 			struct pci_bus *bus = pdev->bus;
 			/* there could be a offset fw->data + 0x200 */
-	                memcpy(z1_wmac0_data.eeprom_data, fw->data,
-			       sizeof(z1_wmac0_data.eeprom_data));
+	                memcpy(z1_wmac0_data.eeprom_data,
+			       fw->data + 0x200,
+			       sizeof(z1_wmac0_data.eeprom_data) - 0x200);
 
-			pci_enable_ath9k_fixup(0, z1_wmac0_data.eeprom_data);
+			pci_enable_ath9k_fixup(0, kmemdup(fw->data, fw->size, GFP_KERNEL));
 			pci_stop_and_remove_bus_device(pdev);
 
 			/* the device should come back with the proper
