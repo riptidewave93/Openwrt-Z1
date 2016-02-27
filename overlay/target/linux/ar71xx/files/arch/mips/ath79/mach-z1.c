@@ -160,17 +160,18 @@ static void z1_fw_cb(const struct firmware *fw, void *ctx)
 {
 	struct platform_device *vdev = (struct platform_device *) ctx;
 
-	if (fw) {
+	if (fw && sizeof(z1_wmac0_data.eeprom_data) >= fw->size) {
 		struct pci_dev *pdev;
 
 		pci_lock_rescan_remove();
 		pdev = pci_get_device(0x168c, 0xff1c, NULL);
 		if (pdev) {
 			struct pci_bus *bus = pdev->bus;
-			u16 *cal_data = kmemdup(fw->data, fw->size,
-						GFP_KERNEL);
+			/* there could be a offset fw->data + 0x200 */
+	                memcpy(z1_wmac0_data.eeprom_data, fw->data,
+			       sizeof(z1_wmac0_data.eeprom_data));
 
-			pci_enable_ath9k_fixup(0, cal_data);
+			pci_enable_ath9k_fixup(0, z1_wmac0_data.eeprom_data);
 			pci_stop_and_remove_bus_device(pdev);
 
 			/* the device should come back with the proper
@@ -184,7 +185,7 @@ static void z1_fw_cb(const struct firmware *fw, void *ctx)
 
 		release_firmware(fw);
 	} else {
-		printk(KERN_ERR "caldata request for '" EEPROM_CALDATA "' timed out");
+		printk(KERN_ERR "invalid caldata received\n");
 	}
 	platform_device_unregister(vdev);
 }
