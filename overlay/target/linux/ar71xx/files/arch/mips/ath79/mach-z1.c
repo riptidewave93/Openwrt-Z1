@@ -124,7 +124,6 @@ static struct mdio_board_info z1_mdio0_info[] = {
 
 static struct ath9k_platform_data z1_wmac0_data = {
 	.led_pin = -1,
-	.eeprom_name = EEPROM_CALDATA,
 };
 
 static int z1_pci_plat_dev_init(struct pci_dev *dev)
