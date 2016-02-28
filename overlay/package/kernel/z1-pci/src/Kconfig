@@ -1,2 +1,2 @@
-config BUTTON_HOTPLUG
-	tristate "Button Hotplug driver"
+config Z1_PCI
+	tristate "Meraki Z1 PCIe Driver Module"
