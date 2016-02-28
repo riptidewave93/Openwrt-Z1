@@ -124,3 +124,4 @@ void pci_enable_ath9k_fixup(unsigned slot, u16 *cal_data)
 	ath9k_fixups[ath9k_num_fixups].cal_data = cal_data;
 	ath9k_num_fixups++;
 }
+EXPORT_SYMBOL_GPL(pci_enable_ath9k_fixup);

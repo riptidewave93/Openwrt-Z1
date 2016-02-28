@@ -30,7 +30,6 @@
 #include "dev-usb.h"
 #include "dev-wmac.h"
 #include "machtypes.h"
-#include "caldata.h"
 
 #define Z1_GPIO_LED_POWER_ORANGE    17
 
@@ -159,6 +158,6 @@ static void __init z1_setup(void)
 
 	/* Wireless */
 	ath79_register_wmac_simple();
-	ap91_pci_init(z1_caldata, NULL);
+	ap91_pci_init(NULL, NULL);
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
