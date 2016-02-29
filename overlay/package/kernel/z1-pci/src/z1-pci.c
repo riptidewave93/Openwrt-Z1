@@ -68,7 +68,6 @@ static void z1_fw_cb(const struct firmware *fw, void *ctx)
 	 * ProductId. But we have to initiate a rescan.
 	 */
 
-	print_hex_dump_bytes("PDAT:", DUMP_PREFIX_OFFSET, pdata, sizeof(*pdata));
 	pci_rescan_bus(bus);
 
 unlock:

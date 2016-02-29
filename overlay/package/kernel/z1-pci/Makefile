@@ -18,7 +18,7 @@ define KernelPackage/z1-pci
   TITLE:=Cisco Meraki Z1 PCIe Wifi Support
   DEPENDS:=+kmod-ath9k
   FILES:=$(PKG_BUILD_DIR)/z1-pci.ko
-  AUTOLOAD:=$(call AutoLoad,99,z1-pci,1)
+  AUTOLOAD:=$(call AutoProbe,z1-pci)
   KCONFIG:=
 endef
 
