@@ -1,0 +1,10 @@
+--- a/arch/mips/ath79/pci.c	2016-02-28 01:56:13.957596039 +0100
++++ b/arch/mips/ath79/pci.c	2016-02-28 01:34:43.099284107 +0100
+@@ -152,6 +152,7 @@ int pcibios_plat_dev_init(struct pci_dev
+ 
+ 	return 0;
+ }
++EXPORT_SYMBOL_GPL(pcibios_plat_dev_init);
+ 
+ void __init ath79_pci_set_irq_map(unsigned nr_irqs,
+ 				  const struct ath79_pci_irq *map)

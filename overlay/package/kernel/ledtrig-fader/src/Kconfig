@@ -1,0 +1,9 @@
+config LEDS_TRIGGER_FADER
+	tristate "LED Fading Trigger"
+	help
+	  LEDs configured to use the fade trigger will fade gradually between each of them.
+	  For example if you have three leds (RGB) each with variable brightness, if you add
+	  all three to the fader trigger they will gradually fade from R -> G -> B -> R in a loop.
+	  If you add a single LED to the fader, it will fade in and out similar to the LED breathing
+	  on Macs.
+	  If unsure, say N.

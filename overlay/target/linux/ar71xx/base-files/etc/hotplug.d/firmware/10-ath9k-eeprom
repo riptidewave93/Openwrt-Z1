@@ -114,9 +114,9 @@ case "$FIRMWARE" in
 		. /lib/upgrade/nand.sh
 
 		if [ -n "$(nand_find_volume ubi0 caldata)" ]; then
-			ath9k_ubi_eeprom_extract "caldata" 86016 2048
+			ath9k_ubi_eeprom_extract "caldata" 86016 4096
 		else
-			ath9k_eeprom_extract "origcaldata" 86016 2048
+			ath9k_eeprom_extract "origcaldata" 86016 4096
 		fi
 		ath9k_patch_firmware_mac $(macaddr_add $(mtd_get_mac_binary_ubi board-config 102) +3)
 		;;
