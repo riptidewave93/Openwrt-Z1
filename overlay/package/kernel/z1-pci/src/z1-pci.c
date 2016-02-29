@@ -1,7 +1,7 @@
 /*
- *  Cisco Meraki Z1 board support
+ *  Initialize Cisco Meraki Z1's PCIe Wifi (AR9280)
  *
- *  Copyright (C) 2016 Chris Blake <chrisrblake93@gmail.com>
+ *  Copyright (C) 2016 Christian Lamparter <chunkeey@googlemail.com>
  *
  *  Based on Cisco Meraki GPL Release r23-20150601 Z1 Device Config
  *
@@ -23,6 +23,7 @@
 #include "../arch/mips/ath79/pci-ath9k-fixup.h"
 #include "../arch/mips/ath79/dev-ap9x-pci.h"
 
+/* can be acquired from pdata->eeprom_name */
 #define EEPROM_CALDATA "pci_wmac0.eeprom"
 
 static void z1_fw_cb(const struct firmware *fw, void *ctx)
@@ -113,4 +114,3 @@ static void z1_wmac0_exit(void)
 module_init(z1_wmac0_init);
 module_exit(z1_wmac0_exit);
 MODULE_LICENSE("GPL");
-
