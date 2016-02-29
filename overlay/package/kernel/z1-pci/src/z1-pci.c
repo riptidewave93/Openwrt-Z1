@@ -1,9 +1,7 @@
 /*
- *  Initialize Cisco Meraki Z1's PCIe Wifi (AR9280)
+ *  Initialize Cisco Meraki Z1's PCIe AR9280 Wifi
  *
  *  Copyright (C) 2016 Christian Lamparter <chunkeey@googlemail.com>
- *
- *  Based on Cisco Meraki GPL Release r23-20150601 Z1 Device Config
  *
  *  This program is free software; you can redistribute it and/or modify it
  *  under the terms of the GNU General Public License version 2 as published
@@ -11,56 +9,45 @@
  */
 #include <linux/module.h>
 #include <linux/version.h>
+#include <linux/completion.h>
+#include <linux/firmware.h>
+#include <linux/pci.h>
 #include <linux/platform_device.h>
 #include <linux/ath9k_platform.h>
 
-#include <asm/mach-ath79/ath79.h>
-#include <asm/mach-ath79/ar71xx_regs.h>
-
-#include <linux/firmware.h>
-#include <linux/pci.h>
-
 #include "../arch/mips/ath79/pci-ath9k-fixup.h"
-#include "../arch/mips/ath79/dev-ap9x-pci.h"
 
-/* can be acquired from pdata->eeprom_name */
-#define EEPROM_CALDATA "pci_wmac0.eeprom"
+struct z1_ctx {
+	struct completion eeprom_load;
+};
 
-static void z1_fw_cb(const struct firmware *fw, void *ctx)
+static void z1_fw_cb(const struct firmware *fw, void *context)
 {
-	struct platform_device *vdev = (struct platform_device *) ctx;
+	struct pci_dev *pdev = (struct pci_dev *) context;
+	struct z1_ctx *ctx = (struct z1_ctx *) pci_get_drvdata(pdev);
+	struct ath9k_platform_data *pdata = dev_get_platdata(&pdev->dev);
 	struct pci_bus *bus;
-	struct pci_dev *pdev;
-	struct ath9k_platform_data *pdata;
-	int slot;
+
+	complete(&ctx->eeprom_load);
 
 	if (!fw) {
-		printk(KERN_ERR "no '" EEPROM_CALDATA "' received.\n");
+		dev_err(&pdev->dev, "no '%s' eeprom file received.",
+		       pdata->eeprom_name);
+		goto release;
+	}
+
+	if (fw->size > sizeof(pdata->eeprom_data)) {
+		dev_err(&pdev->dev, "loaded data is too big.");
 		goto release;
 	}
 
 	pci_lock_rescan_remove();
-	pdev = pci_get_device(0x168c, 0xff1c, NULL);
-	if (!pdev) {
-		printk(KERN_ERR "Failed to find uninitialized pci wmac0.\n");
-		goto unlock;
-	}
-
 	bus = pdev->bus;
-	slot = pcibios_plat_dev_init(pdev);
-	pdata = ap9x_pci_get_wmac_data(slot);
-
-	if (!pdata) {
-		printk(KERN_ERR "No platform data\n");
-		goto unlock;
-	}
-
-	if (fw->size > sizeof(pdata->eeprom_data)) {
-		printk(KERN_ERR "loaded data is too big.\n");
-		goto unlock;
-	}
 
 	memcpy(pdata->eeprom_data, fw->data, sizeof(pdata->eeprom_data));
+	/* eeprom has been successfully loaded - pass the data to ath9k
+	 * but remove the eeprom_name, so it doesn't try to load it too.
+	 */
 	pdata->eeprom_name = NULL;
 
 	pci_enable_ath9k_fixup(0, pdata->eeprom_data);
@@ -68,49 +55,66 @@ static void z1_fw_cb(const struct firmware *fw, void *ctx)
 	/* the device should come back with the proper
 	 * ProductId. But we have to initiate a rescan.
 	 */
-
 	pci_rescan_bus(bus);
-
-unlock:
 	pci_unlock_rescan_remove();
 
 release:
 	release_firmware(fw);
-	platform_device_unregister(vdev);
 }
 
-static int z1_wmac0_init(void)
+static int z1_probe(struct pci_dev *pdev,
+		    const struct pci_device_id *id)
 {
-	struct ath9k_platform_data *pdata = ap9x_pci_get_wmac_data(0);
-	struct platform_device *vdev;
+	struct z1_ctx *ctx;
+	struct ath9k_platform_data *pdata;
 	int err = 0;
 
-	/* create a virtual device for the eeprom loader. This is necessary
-	 * because request_firmware_nowait needs a proper device for
-	 * accounting. In theory, the pci device could be used as well.
-	 * However we don't know the state of the device at this point.
-	 */
-	vdev = platform_device_register_simple("z1_caldata", -1, NULL, 0);
-	if (IS_ERR(vdev)) {
-		err = PTR_ERR(vdev);
-		printk(KERN_ERR "failed to register vdev. (%d).\n", err);
-		return err;
+	pdata = dev_get_platdata(&pdev->dev);
+	if (!pdata || !pdata->eeprom_data) {
+		dev_err(&pdev->dev, "platform data missing or no eeprom file defined.");
+		return -ENODEV;
 	}
 
-	err = request_firmware_nowait(THIS_MODULE, true, EEPROM_CALDATA,
-				      &vdev->dev, GFP_KERNEL, vdev, z1_fw_cb);
+	ctx = kzalloc(sizeof(*ctx), GFP_KERNEL);
+	if (!ctx) {
+		dev_err(&pdev->dev, "failed to alloc device context.");
+		return -ENOMEM;
+	}
+	init_completion(&ctx->eeprom_load);
+
+	pci_set_drvdata(pdev, ctx);
+	err = request_firmware_nowait(THIS_MODULE, true, pdata->eeprom_name,
+				      &pdev->dev, GFP_KERNEL, pdev, z1_fw_cb);
 	if (err) {
-		printk(KERN_ERR "failed to request caldata (%d).\n", err);
-		platform_device_unregister(vdev);
+		dev_err(&pdev->dev, "failed to request caldata (%d).", err);
+		kfree(ctx);
 	}
 	return err;
 }
 
-static void z1_wmac0_exit(void)
+static void z1_remove(struct pci_dev *pdev)
 {
-	/* request_firmware_nowait will grab a instance of this module */
+	struct z1_ctx *ctx = pci_get_drvdata(pdev);
+
+	if (ctx) {
+		wait_for_completion(&ctx->eeprom_load);
+		pci_set_drvdata(pdev, NULL);
+	}
 }
 
-module_init(z1_wmac0_init);
-module_exit(z1_wmac0_exit);
+static const struct pci_device_id z1_pci_table[] = {
+	/* PCIe Owl Emulation */
+	{ PCI_VDEVICE(ATHEROS, 0xff1c) }, /* * PCI-E */
+	{ },
+};
+MODULE_DEVICE_TABLE(pci, z1_pci_table);
+
+static struct pci_driver z1_driver = {
+	.name		= "z1-pci",
+	.id_table	= z1_pci_table,
+	.probe		= z1_probe,
+	.remove		= z1_remove,
+};
+module_pci_driver(z1_driver);
+
 MODULE_LICENSE("GPL");
