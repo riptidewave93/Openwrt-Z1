@@ -19,16 +19,17 @@
 #include <asm/mach-ath79/ar71xx_regs.h>
 
 #include <linux/leds-nu801.h>
+#include <linux/firmware.h>
 #include <linux/pci.h>
 
 #include "common.h"
-#include "dev-ap9x-pci.h"
 #include "dev-eth.h"
 #include "dev-gpio-buttons.h"
 #include "dev-leds-gpio.h"
 #include "dev-nfc.h"
 #include "dev-usb.h"
 #include "dev-wmac.h"
+#include "dev-ap9x-pci.h"
 #include "machtypes.h"
 
 #define Z1_GPIO_LED_POWER_ORANGE    17
@@ -158,6 +159,6 @@ static void __init z1_setup(void)
 
 	/* Wireless */
 	ath79_register_wmac_simple();
-	ap91_pci_init(NULL, NULL);
+	ap91_pci_init_simple();
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);

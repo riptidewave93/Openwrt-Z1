@@ -18,7 +18,7 @@ $(eval $(call Profile,MR18))
 
 define Profile/Z1
 	NAME:=Meraki Z1
-	PACKAGES:=kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-ledtrig-usbdev kmod-spi-gpio kmod-ath9k kmod-z1-pci
+	PACKAGES:=kmod-usb-core kmod-usb-ohci kmod-usb2 kmod-ledtrig-usbdev kmod-spi-gpio kmod-ath9k kmod-owl-loader
 endef
 
 define Profile/Z1/description

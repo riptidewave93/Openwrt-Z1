@@ -2,7 +2,7 @@
 
 Bringup repo for the Cisco Meraki Z1 on OpenWRT!
 
-Currently based on commit http://git.openwrt.org/?p=openwrt.git;a=commit;h=0274d7f91ff5df6189b509200f402dba9abadf49
+Currently based on commit http://git.openwrt.org/?p=openwrt.git;a=commit;h=cccc6363725cab791014e9d38850f74091e9553c
 
 Building
 -----
@@ -17,15 +17,13 @@ Note that you will need to run a modify on the first compile to select the NAND 
 To Do
 -----
 ##### Z1
-  * Fixup WiFi on PCIe
-  * Cleanup Eth config? (maybe)
   * Merge upstream!
 
 Working
 -----
 ##### Z1
   * Sysupgrade & Caldata generation
-  * WiFi (mostly)
+  * WiFi (PCIe loaded via module)
   * Ethernet
   * LED's/GPIOs
   * System Integration
