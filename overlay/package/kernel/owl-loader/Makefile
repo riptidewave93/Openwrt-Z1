@@ -1,5 +1,5 @@
 #
-# Copyright (C) 2008-2010 OpenWrt.org
+# Copyright (C) 2016 OpenWrt.org
 #
 # This is free software, licensed under the GNU General Public License v2.
 # See /LICENSE for more information.
@@ -8,26 +8,27 @@
 include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
-PKG_NAME:=z1-pci
-PKG_RELEASE:=3
+PKG_NAME:=owl-loader
+PKG_RELEASE:=1
 
 include $(INCLUDE_DIR)/package.mk
 
-define KernelPackage/z1-pci
+define KernelPackage/owl-loader
   SUBMENU:=Other modules
-  TITLE:=Cisco Meraki Z1 PCIe Wifi Support
+  TITLE:=Owl loader for Atheros PCIe Wifi support
   DEPENDS:=+kmod-ath9k
-  FILES:=$(PKG_BUILD_DIR)/z1-pci.ko
-  AUTOLOAD:=$(call AutoProbe,z1-pci)
+  FILES:=$(PKG_BUILD_DIR)/owl-loader.ko
+  AUTOLOAD:=$(call AutoProbe,owl-loader)
   KCONFIG:=
 endef
 
-define KernelPackage/z1-pci/description
-  Kernel module to support Cisco's Meraki Z1 PCIe Wifi.
+define KernelPackage/owl-loader/description
+  Kernel module to initialize Owl Emulation Devices.
+  This is necessary for the Cisco Meraki Z1.
 endef
 
 EXTRA_KCONFIG:= \
-	CONFIG_Z1_PCI=m
+	CONFIG_OWL_LOADER=m
 
 EXTRA_CFLAGS:= \
 	$(patsubst CONFIG_%, -DCONFIG_%=1, $(patsubst %=m,%,$(filter %=m,$(EXTRA_KCONFIG)))) \
@@ -51,4 +52,4 @@ define Build/Compile
 		modules
 endef
 
-$(eval $(call KernelPackage,z1-pci))
+$(eval $(call KernelPackage,owl-loader))
