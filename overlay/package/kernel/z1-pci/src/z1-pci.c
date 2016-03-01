@@ -69,6 +69,10 @@ static int z1_probe(struct pci_dev *pdev,
 	struct ath9k_platform_data *pdata;
 	int err = 0;
 
+	if (pcim_enable_device(pdev))
+		return -EIO;
+
+	/* we now have a valid dev->platform_data */
 	pdata = dev_get_platdata(&pdev->dev);
 	if (!pdata || !pdata->eeprom_data) {
 		dev_err(&pdev->dev, "platform data missing or no eeprom file defined.");
