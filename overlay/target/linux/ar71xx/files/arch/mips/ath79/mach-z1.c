@@ -159,6 +159,6 @@ static void __init z1_setup(void)
 
 	/* Wireless */
 	ath79_register_wmac_simple();
-	ap91_pci_init(NULL, NULL);
+	ap91_pci_init_simple();
 }
 MIPS_MACHINE(ATH79_MACH_Z1, "Z1", "Meraki Z1", z1_setup);
