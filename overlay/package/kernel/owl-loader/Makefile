@@ -14,7 +14,7 @@ PKG_RELEASE:=1
 include $(INCLUDE_DIR)/package.mk
 
 define KernelPackage/owl-loader
-  SUBMENU:=Other modules
+  SUBMENU:=Network Support
   TITLE:=Owl loader for Atheros PCIe Wifi support
   DEPENDS:=+kmod-ath9k
   FILES:=$(PKG_BUILD_DIR)/owl-loader.ko
