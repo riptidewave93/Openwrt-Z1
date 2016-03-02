@@ -1,2 +1,0 @@
-config OWL_LOADER
-	tristate "Owl loader for Atheros PCIe Wifi support"

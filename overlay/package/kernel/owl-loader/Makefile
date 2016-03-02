@@ -16,7 +16,7 @@ include $(INCLUDE_DIR)/package.mk
 define KernelPackage/owl-loader
   SUBMENU:=Other modules
   TITLE:=Owl loader for Atheros PCIe Wifi support
-  DEPENDS:=+kmod-ath9k
+  DEPENDS:=@PCI_SUPPORT @TARGET_ar71xx +kmod-ath9k
   FILES:=$(PKG_BUILD_DIR)/owl-loader.ko
   AUTOLOAD:=$(call AutoProbe,owl-loader)
   KCONFIG:=
