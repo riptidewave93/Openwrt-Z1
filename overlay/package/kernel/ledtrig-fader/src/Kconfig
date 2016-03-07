@@ -6,4 +6,5 @@ config LEDS_TRIGGER_FADER
 	  all three to the fader trigger they will gradually fade from R -> G -> B -> R in a loop.
 	  If you add a single LED to the fader, it will fade in and out similar to the LED breathing
 	  on Macs.
-	  If unsure, say N.
+
+	  Normally used with the NU801 PWM LED Device.

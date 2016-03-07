@@ -2,7 +2,7 @@
 
 Bringup repo for the Cisco Meraki Z1 on OpenWRT!
 
-Currently based on commit http://git.openwrt.org/?p=openwrt.git;a=commit;h=2e4094eb214f8214a98b8354e8cd0b4e7d8b84a5
+Currently based on commit http://git.openwrt.org/?p=openwrt.git;a=commit;h=63bce15a60d6a307540662f87ce1b2515c553800
 
 Building
 -----

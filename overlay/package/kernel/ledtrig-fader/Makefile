@@ -10,7 +10,7 @@ include $(TOPDIR)/rules.mk
 include $(INCLUDE_DIR)/kernel.mk
 
 PKG_NAME:=LEDTRIG-FADER
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 
 include $(INCLUDE_DIR)/package.mk
 
@@ -28,7 +28,8 @@ define KernelPackage/ledtrig-fader/description
   variable brightness, if you add all three to the fader trigger they will gradually fade
   from R -> G -> B -> R in a loop.If you add a single LED to the fader, it will fade in
   and out similar to the LED breathing on Macs.
-  If unsure, say N.
+
+  Normally used with the NU801 PWM LED Device.
 endef
 
 EXTRA_KCONFIG:= \
