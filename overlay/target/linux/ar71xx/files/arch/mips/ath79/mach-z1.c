@@ -32,19 +32,19 @@
 #include "dev-ap9x-pci.h"
 #include "machtypes.h"
 
-#define Z1_GPIO_LED_POWER_ORANGE    17
+#define Z1_GPIO_LED_POWER_ORANGE	17
 
-#define Z1_GPIO_NU801_CKI        14
-#define Z1_GPIO_NU801_SDI        15
+#define Z1_GPIO_NU801_CKI		14
+#define Z1_GPIO_NU801_SDI		15
 
-#define Z1_GPIO_XLNA0		18
-#define Z1_GPIO_XLNA1		19
+#define Z1_GPIO_XLNA0			18
+#define Z1_GPIO_XLNA1			19
 
-#define Z1_GPIO_BTN_RESET    12
-#define Z1_KEYS_POLL_INTERVAL    20  /* msecs */
-#define Z1_KEYS_DEBOUNCE_INTERVAL  (3 * Z1_KEYS_POLL_INTERVAL)
+#define Z1_GPIO_BTN_RESET		12
+#define Z1_KEYS_POLL_INTERVAL		20  /* msecs */
+#define Z1_KEYS_DEBOUNCE_INTERVAL	(3 * Z1_KEYS_POLL_INTERVAL)
 
-#define Z1_ETH_SWITCH_PHY 0
+#define Z1_ETH_SWITCH_PHY		0
 
 static struct gpio_led Z1_leds_gpio[] __initdata = {
 	{

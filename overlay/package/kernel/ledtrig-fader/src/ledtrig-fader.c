@@ -16,15 +16,16 @@
 #include <linux/spinlock.h>
 #include <linux/workqueue.h>
 #include <linux/leds.h>
-#include "leds.h"
+#include <linux/device.h>
+#include <linux/rwsem.h>
 
 struct fader {
-	struct rw_semaphore lock;
-	struct delayed_work work;
-	struct led_trigger  trig;
-	struct              led_classdev *shrinking;
-	struct              led_classdev *growing;
-	u32                 speed;
+	struct rw_semaphore	lock;
+	struct delayed_work	work;
+	struct led_trigger	trig;
+	struct led_classdev	*shrinking;
+	struct led_classdev	*growing;
+	u32			speed;
 };
 
 static void fade_activate(struct led_classdev *);
@@ -39,17 +40,27 @@ static struct fader fader = {
 	.shrinking = NULL,
 };
 
-/* the trigger structure is in the list, so make sure we skip it when traversing */
-static struct led_classdev* next_led(struct led_classdev *lcd, struct led_trigger *trig) {
+static int led_get_brightness(struct led_classdev *led_cdev)
+{
+	return led_cdev->brightness;
+}
+
+/* the trigger structure is in the list, so make
+ * sure we skip it when traversing. */
+static struct led_classdev *next_led(struct led_classdev *lcd,
+				     struct led_trigger *trig) {
 	unsigned long flags;
 	struct led_classdev *r;
 
 	write_lock_irqsave(&trig->leddev_list_lock, flags);
 
-	if (lcd->trig_list.next == &trig->led_cdevs)
-		r = list_first_entry(lcd->trig_list.next, struct led_classdev, trig_list);
-	else
-		r = list_first_entry(&lcd->trig_list, struct led_classdev, trig_list);
+	if (lcd->trig_list.next == &trig->led_cdevs) {
+		r = list_first_entry(lcd->trig_list.next, struct led_classdev,
+				     trig_list);
+	} else {
+		r = list_first_entry(&lcd->trig_list, struct led_classdev,
+				     trig_list);
+	}
 
 	write_unlock_irqrestore(&trig->leddev_list_lock, flags);
 	return r;
@@ -62,7 +73,9 @@ static void fader_work(struct work_struct *work)
 
 	if (fader.shrinking) {
 		if (led_get_brightness(fader.shrinking) > fader.speed) {
-			led_set_brightness(fader.shrinking, led_get_brightness(fader.shrinking) - fader.speed);
+			led_set_brightness(fader.shrinking,
+					   led_get_brightness(fader.shrinking) -
+					   fader.speed);
 		} else {
 			led_set_brightness(fader.shrinking, 0);
 			change_shrinker = 1;
@@ -70,10 +83,12 @@ static void fader_work(struct work_struct *work)
 	}
 
 	if (fader.growing) {
-		int brightness = led_get_brightness(fader.growing) + fader.speed;
+		int brightness = led_get_brightness(fader.growing) +
+				 fader.speed;
 		if (brightness > fader.growing->max_brightness) {
 			change_grower = 1;
-			led_set_brightness(fader.growing, fader.growing->max_brightness);
+			led_set_brightness(fader.growing,
+					   fader.growing->max_brightness);
 		} else {
 			led_set_brightness(fader.growing, brightness);
 		}
@@ -117,7 +132,7 @@ static void fade_activate(struct led_classdev *led_cdev)
 
 static void fade_deactivate(struct led_classdev *led_cdev)
 {
-	struct led_classdev **kept_p= NULL, **removed_p = NULL;
+	struct led_classdev **kept_p = NULL, **removed_p = NULL;
 	down_write(&fader.lock);
 
 	if (fader.growing == led_cdev) {
@@ -158,7 +173,6 @@ static void fade_trig_exit(void)
 
 module_init(fade_trig_init);
 module_exit(fade_trig_exit);
-
 MODULE_AUTHOR("Justin Delegard <jdizzle@meraki.net>");
 MODULE_DESCRIPTION("Fading LED trigger");
 MODULE_LICENSE("GPL");

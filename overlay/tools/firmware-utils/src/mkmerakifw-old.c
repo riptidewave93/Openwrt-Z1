@@ -29,50 +29,25 @@
 #include <errno.h>
 #include <arpa/inet.h>
 
-#include "sha1.h"
-
 #define PADDING_BYTE		0xff
 
-#define HDR_LENGTH		0x00000400
-#define HDR_OFF_MAGIC1		0
-#define HDR_OFF_HDRLEN		4
+#define HDR_LENGTH		0x00000020
+#define HDR_OFF_MAGIC1	0
+#define HDR_OFF_LOAD_ADDR	4
 #define HDR_OFF_IMAGELEN	8
-#define HDR_OFF_CHECKSUM	12
-#define HDR_OFF_MAGIC2		32
-#define HDR_OFF_FILLER		36
-#define HDR_OFF_STATICHASH	40
-
-#define OLD_HDR_LENGTH		0x00000020
-#define OLD_HDR_OFF_MAGIC1	0
-#define OLD_HDR_OFF_LOAD_ADDR	4
-#define OLD_HDR_OFF_IMAGELEN	8
-#define OLD_HDR_OFF_ENTRY	12
-#define OLD_HDR_OFF_CHECKSUM	16
-#define OLD_HDR_OFF_FILLER0	20
-#define OLD_HDR_OFF_FILLER1	24
-#define OLD_HDR_OFF_FILLER2	28
-
-enum header_type_t {
-	MERAKI_OLD,
-	MERAKI_NEW,
-};
+#define HDR_OFF_ENTRY	12
+#define HDR_OFF_CHECKSUM	16
+#define HDR_OFF_FILLER0	20
+#define HDR_OFF_FILLER1	24
+#define HDR_OFF_FILLER2	28
 
 struct board_info {
-	enum header_type_t header_type;
 	char *id;
 	char *description;
 	uint32_t magic;
 	uint32_t imagelen;
-
-	union {
-		struct {
-			unsigned char statichash[20];
-		};
-		struct {
-			uint32_t load_addr;
-			uint32_t entry;
-		};
-	};
+	uint32_t load_addr;
+	uint32_t entry;
 };
 
 /*
@@ -86,17 +61,6 @@ static const struct board_info *board;
 
 static const struct board_info boards[] = {
 	{
-		.header_type	= MERAKI_NEW,
-		.id		= "mr18",
-		.description	= "Meraki MR18 Access Point",
-		.magic		= 0x8e73ed8a,
-		.imagelen	= 0x00800000,
-		.statichash	= {0xda, 0x39, 0xa3, 0xee, 0x5e,
-				   0x6b, 0x4b, 0x0d, 0x32, 0x55,
-				   0xbf, 0xef, 0x95, 0x60, 0x18,
-				   0x90, 0xaf, 0xd8, 0x07, 0x09},
-	}, {
-		.header_type	= MERAKI_OLD,
 		.id		= "z1",
 		.description	= "Meraki Z1 Access Point",
 		.magic		= 0x4d495053,
@@ -167,59 +131,6 @@ static void writel(unsigned char *buf, size_t offset, uint32_t value)
 {
 	value = htobe32(value);
 	memcpy(buf + offset, &value, sizeof(uint32_t));
-}
-
-static int meraki_new(const struct board_info *board, const size_t klen,
-		      FILE *out, FILE *in)
-{
-	unsigned char *kernel;
-	unsigned char *buf;
-	size_t buflen;
-	size_t kspace;
-
-	size_t rc;
-	buflen = board->imagelen;
-	kspace = buflen - HDR_LENGTH;
-
-	if (klen > kspace) {
-		ERR("kernel file is too big - max size: 0x%08lX\n", kspace);
-		return EXIT_FAILURE;
-	}
-
-	/* If requested, resize buffer to remove padding */
-	if (strip_padding)
-		buflen = klen + HDR_LENGTH;
-
-	/* Allocate and initialize buffer for final image */
-	buf = malloc(buflen);
-	if (buf == NULL) {
-		ERRS("no memory for buffer: %s\n");
-		return EXIT_FAILURE;
-	}
-	memset(buf, PADDING_BYTE, buflen);
-
-	/* Load kernel */
-	kernel = buf + HDR_LENGTH;
-	fread(kernel, klen, 1, in);
-
-	/* Write magic values and filler */
-	writel(buf, HDR_OFF_MAGIC1, board->magic);
-	writel(buf, HDR_OFF_MAGIC2, board->magic);
-	writel(buf, HDR_OFF_FILLER, 0);
-
-	/* Write header and image length */
-	writel(buf, HDR_OFF_HDRLEN, HDR_LENGTH);
-	writel(buf, HDR_OFF_IMAGELEN, klen);
-
-	/* Write checksum and static hash */
-	sha1_csum(kernel, klen, buf + HDR_OFF_CHECKSUM);
-	memcpy(buf + HDR_OFF_STATICHASH, board->statichash, 20);
-
-	rc = fwrite(buf, buflen, 1, out);
-
-	free(buf);
-
-	return rc == 1 ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 static const uint32_t crc32_table[] = {
@@ -308,12 +219,12 @@ static void crc32_csum(uint8_t *buf, const size_t len)
 	}
 	crc = ~crc;
 
-	writel(buf, OLD_HDR_OFF_CHECKSUM, crc);
+	writel(buf, HDR_OFF_CHECKSUM, crc);
 }
 
 
-static int meraki_old(const struct board_info *board, const size_t klen,
-		      FILE *out, FILE *in)
+static int meraki_build_hdr(const struct board_info *board, const size_t klen,
+			    FILE *out, FILE *in)
 {
 	unsigned char *kernel;
 	unsigned char *buf;
@@ -322,7 +233,7 @@ static int meraki_old(const struct board_info *board, const size_t klen,
 
 	size_t rc;
 	buflen = board->imagelen;
-	kspace = buflen - OLD_HDR_LENGTH;
+	kspace = buflen - HDR_LENGTH;
 
 	if (klen > kspace) {
 		ERR("kernel file is too big - max size: 0x%08lX\n", kspace);
@@ -331,7 +242,7 @@ static int meraki_old(const struct board_info *board, const size_t klen,
 
 	/* If requested, resize buffer to remove padding */
 	if (strip_padding)
-		buflen = klen + OLD_HDR_LENGTH;
+		buflen = klen + HDR_LENGTH;
 
 	/* Allocate and initialize buffer for final image */
 	buf = malloc(buflen);
@@ -342,27 +253,27 @@ static int meraki_old(const struct board_info *board, const size_t klen,
 	memset(buf, PADDING_BYTE, buflen);
 
 	/* Load kernel */
-	kernel = buf + OLD_HDR_LENGTH;
+	kernel = buf + HDR_LENGTH;
 	fread(kernel, klen, 1, in);
 
 	/* Write magic values and filler */
-	writel(buf, OLD_HDR_OFF_MAGIC1, board->magic);
-	writel(buf, OLD_HDR_OFF_FILLER0, 0);
-	writel(buf, OLD_HDR_OFF_FILLER1, 0);
-	writel(buf, OLD_HDR_OFF_FILLER2, 0);
+	writel(buf, HDR_OFF_MAGIC1, board->magic);
+	writel(buf, HDR_OFF_FILLER0, 0);
+	writel(buf, HDR_OFF_FILLER1, 0);
+	writel(buf, HDR_OFF_FILLER2, 0);
 
 	/* Write load and kernel entry point address */
-	writel(buf, OLD_HDR_OFF_LOAD_ADDR, board->load_addr);
-	writel(buf, OLD_HDR_OFF_ENTRY, board->entry);
+	writel(buf, HDR_OFF_LOAD_ADDR, board->load_addr);
+	writel(buf, HDR_OFF_ENTRY, board->entry);
 
 	/* Write header and image length */
-	writel(buf, OLD_HDR_OFF_IMAGELEN, klen);
+	writel(buf, HDR_OFF_IMAGELEN, klen);
 
 	/* this gets replaced later, after the checksum has been calculated */
-	writel(buf, OLD_HDR_OFF_CHECKSUM, 0);
+	writel(buf, HDR_OFF_CHECKSUM, 0);
 
 	/* Write checksum */
-	crc32_csum(buf, klen + OLD_HDR_LENGTH);
+	crc32_csum(buf, klen + HDR_LENGTH);
 
 	rc = fwrite(buf, buflen, 1, out);
 
@@ -447,15 +358,7 @@ int main(int argc, char *argv[])
 		goto err_close_in;
 	}
 
-	switch (board->header_type) {
-	case MERAKI_NEW:
-		ret = meraki_new(board, klen, out, in);
-		break;
-	case MERAKI_OLD:
-		ret = meraki_old(board, klen, out, in);
-		break;
-	}
-
+	ret = meraki_build_hdr(board, klen, out, in);
 	fclose(out);
 
 err_close_in:
