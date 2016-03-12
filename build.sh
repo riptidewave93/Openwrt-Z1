@@ -45,6 +45,7 @@ if [ $firstbuild = "1" ]; then
   ./scripts/feeds install -a
   make defconfig
   make prereq
+  rm ./.config
   cd - > /dev/null
 fi
 
