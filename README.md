@@ -1,3 +1,5 @@
+**NOTE: This repo is NO LONGER MAINTAINED as these changes were applied upstream to LEDE. Refer to https://github.com/lede-project/source/commit/68d649f5cd9ee2f6fda00df7bde4b9074474becf and enjoy the official nightles!** 
+
 # Openwrt-Z1
 
 Bringup repo for the Cisco Meraki Z1 on OpenWRT!
